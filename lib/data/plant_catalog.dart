@@ -1,0 +1,168 @@
+import '../models/plant.dart';
+
+/// Hazır bitki profilleri.
+///
+/// Domates, fesleğen ve aloe vera nem değerleri proje dokümanından (Bölüm 4.3)
+/// alınmıştır. Diğerleri genel bakım bilgisine dayalı başlangıç değerleridir;
+/// sensör kalibrasyonundan sonra ekipçe gözden geçirilmelidir.
+const List<Plant> plantCatalog = [
+  // Sebzeler
+  Plant(
+    id: 'domates',
+    name: 'Domates',
+    category: PlantCategory.vegetable,
+    minMoisture: 40,
+    idealMoistureMin: 55,
+    idealMoistureMax: 70,
+    waterNeed: WaterNeed.mediumHigh,
+    tempMin: 18,
+    tempMax: 30,
+    description: 'Düzenli ve dengeli sulama ister. Toprağın tamamen kurumasına '
+        've uzun süre çok ıslak kalmasına dikkat edilmelidir.',
+    source: ValueSource.document,
+  ),
+  Plant(
+    id: 'biber',
+    name: 'Biber',
+    category: PlantCategory.vegetable,
+    minMoisture: 40,
+    idealMoistureMin: 50,
+    idealMoistureMax: 65,
+    waterNeed: WaterNeed.medium,
+    tempMin: 18,
+    tempMax: 30,
+    description: 'Sıcağı sever. Üst toprak hafifçe kuruduğunda sulanır.',
+  ),
+  Plant(
+    id: 'marul',
+    name: 'Marul',
+    category: PlantCategory.vegetable,
+    minMoisture: 45,
+    idealMoistureMin: 60,
+    idealMoistureMax: 75,
+    waterNeed: WaterNeed.high,
+    tempMin: 10,
+    tempMax: 22,
+    description: 'Serin ortamı ve sürekli nemli toprağı sever. Sıcakta çabuk '
+        'strese girer.',
+  ),
+
+  // Aromatik bitkiler
+  Plant(
+    id: 'feslegen',
+    name: 'Fesleğen',
+    category: PlantCategory.herb,
+    minMoisture: 45,
+    idealMoistureMin: 55,
+    idealMoistureMax: 70,
+    waterNeed: WaterNeed.medium,
+    tempMin: 18,
+    tempMax: 30,
+    description: 'Toprağı nemli ama su birikmemiş olmalı. Soğuğa duyarlıdır.',
+    source: ValueSource.documentPartial,
+  ),
+  Plant(
+    id: 'nane',
+    name: 'Nane',
+    category: PlantCategory.herb,
+    minMoisture: 45,
+    idealMoistureMin: 60,
+    idealMoistureMax: 75,
+    waterNeed: WaterNeed.high,
+    tempMin: 15,
+    tempMax: 25,
+    description: 'Bol su ister ve hızlı yayılır. Toprağı sürekli hafif nemli '
+        'tutulmalıdır.',
+  ),
+  Plant(
+    id: 'biberiye',
+    name: 'Biberiye',
+    category: PlantCategory.herb,
+    minMoisture: 20,
+    idealMoistureMin: 30,
+    idealMoistureMax: 45,
+    waterNeed: WaterNeed.low,
+    tempMin: 15,
+    tempMax: 28,
+    description: 'Kuraklığa dayanıklıdır, fazla sudan hoşlanmaz.',
+  ),
+
+  // Sukulent ve kaktüsler
+  Plant(
+    id: 'aloe-vera',
+    name: 'Aloe vera',
+    category: PlantCategory.succulent,
+    minMoisture: 20,
+    idealMoistureMin: 25,
+    idealMoistureMax: 40,
+    waterNeed: WaterNeed.low,
+    tempMin: 18,
+    tempMax: 30,
+    description: 'Yapraklarında su depolar. Toprak iyice kuruduktan sonra '
+        'sulanmalıdır; fazla su kök çürümesine yol açar.',
+    source: ValueSource.documentPartial,
+  ),
+  Plant(
+    id: 'kaktus',
+    name: 'Kaktüs',
+    category: PlantCategory.succulent,
+    minMoisture: 10,
+    idealMoistureMin: 15,
+    idealMoistureMax: 30,
+    waterNeed: WaterNeed.low,
+    tempMin: 18,
+    tempMax: 32,
+    description: 'Çok az su ister. Kışın sulama büyük ölçüde azaltılır.',
+  ),
+  Plant(
+    id: 'para-agaci',
+    name: 'Para ağacı',
+    category: PlantCategory.succulent,
+    minMoisture: 15,
+    idealMoistureMin: 20,
+    idealMoistureMax: 35,
+    waterNeed: WaterNeed.low,
+    tempMin: 15,
+    tempMax: 27,
+    description: 'Crassula ovata. Sulamalar arasında toprağın kurumasını ister.',
+  ),
+
+  // Salon bitkileri
+  Plant(
+    id: 'salon-sarmasigi',
+    name: 'Salon sarmaşığı',
+    category: PlantCategory.houseplant,
+    minMoisture: 30,
+    idealMoistureMin: 40,
+    idealMoistureMax: 60,
+    waterNeed: WaterNeed.medium,
+    tempMin: 18,
+    tempMax: 29,
+    description: 'Pothos. Bakımı kolaydır; üst toprak kuruyunca sulanır.',
+  ),
+  Plant(
+    id: 'pasa-kilici',
+    name: 'Paşa kılıcı',
+    category: PlantCategory.houseplant,
+    minMoisture: 15,
+    idealMoistureMin: 20,
+    idealMoistureMax: 35,
+    waterNeed: WaterNeed.low,
+    tempMin: 15,
+    tempMax: 30,
+    description: 'Sansevieria. Az su ister, kuraklığa çok dayanıklıdır.',
+  ),
+  Plant(
+    id: 'baris-cicegi',
+    name: 'Barış çiçeği',
+    category: PlantCategory.houseplant,
+    minMoisture: 40,
+    idealMoistureMin: 50,
+    idealMoistureMax: 70,
+    waterNeed: WaterNeed.mediumHigh,
+    tempMin: 18,
+    tempMax: 27,
+    description: 'Spathiphyllum. Susuz kalınca yaprakları belirgin şekilde '
+        'sarkar; nemli toprağı sever.',
+  ),
+];
