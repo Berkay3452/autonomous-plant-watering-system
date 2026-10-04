@@ -18,16 +18,22 @@ Bitkilerin toprak nemini ölçen ve kullanıcının mobil uygulamadan belirledi�
 
 ## Uygulama neler yapıyor
 
+Arayüz, `docs/design/` klasöründeki Claude Design çıktılarına (açık ve koyu tema) göre yapıldı. 2 saksı desteklenir.
+
 | Ekran | İçerik |
 |---|---|
-| **Panel** | Saksı özeti, toprak nemi göstergesi, durum etiketi (Susuz / İdeal / Fazla ıslak), su deposu, sıcaklık, hava nemi, bağlantı durumu, "Şimdi sula" |
-| **Saksı detayı** | Canlı parametreler ve bitkiye göre ideal aralıklar, 24 saat / 7 gün grafiği, sulama planları, son sulamalar |
-| **Bitkiler** | 4 kategoride 12 hazır bitki profili, arama, kategori filtresi, kendi bitkini ekleme |
-| **Sulama planı** | Tek sefer / günlük / haftalık, su miktarı (%) |
-| **Bildirimler** | Bitki susuz, depo düşük, cihaz çevrimdışı, sulama tamamlandı / yapılamadı |
-| **Ayarlar** | Tam doz, otomatik mod, güvenlik süreleri, uyarı eşikleri, açık / koyu tema |
+| **Ana sayfa** | Saksı seçici (Saksı 1 / 2), bitki çizimi ve nem halkası, durum etiketi, toprak nemi, sıcaklık, su deposu, sonraki sulama, "Şimdi Sula". Zil simgesi Bildirimler'i açar. |
+| **Saksılarım** | Her saksının bitkisi, durumu, nemi, sıcaklığı ve sıradaki sulaması; ortak su deposu. Karta dokununca bitki türü seçilir. |
+| **Bitki türü** | 6 kategori (Tropikal, Sukulent, Kaktüs, Çiçekli, Aromatik, Sebze & Meyve). "Devam et" ile o kategorideki bitkilere geçilir; bitki ayrıntısı görülüp saksıya atanır, kendi bitkini de ekleyebilirsin. |
+| **Sulama programı** | Saksı başına saat, haftanın günleri, su miktarı (%) ve açma/kapama. Ana sayfadaki "Sonraki sulama" kutusundan açılır. |
+| **Geçmiş** | Gün / Hafta / Ay seçenekli toprak nemi çizgi grafiği (sulamalar işaretli) ve sıcaklık çubukları. |
+| **Bildirimler** | Bitki susadı, su deposu azalıyor, cihaz çevrimdışı, sulama tamamlandı / yapılamadı. Susayan bitki için "Şimdi Sula" düğmesi vardır. |
+| **Ayarlar** | Görünüm (Sistem / Açık / Koyu), dil (Türkçe / English), sıcaklık birimi (°C / °F). Altında güvenlik süreleri, bildirim eşikleri, profil ve cihaz ayarları. |
 
-Bilinen eksikler: telefon bildirim çubuğuna bildirim (şimdilik yalnızca uygulama içi) ve gerçek ESP32 haberleşmesi.
+Bilinen eksikler:
+
+- Telefon bildirim çubuğuna bildirim (şimdilik yalnızca uygulama içi) ve gerçek ESP32 haberleşmesi.
+- Yazı tipleri (Baloo 2 ve Nunito) ilk açılışta internetten indirilir, telefonun internete bağlı olması gerekir.
 
 ## Kurulum (Windows)
 
@@ -152,17 +158,21 @@ Uygulama şu an ESP32'yi taklit eden `MockDeviceService` ile çalışır:
 
 | Kontrol | Denenen senaryo |
 |---|---|
-| Depoyu %12'ye düşür | "Depo seviyesi düşük" bildirimi |
+| Depoyu %12'ye düşür | "Su deposu azalıyor" bildirimi |
 | Depoyu %3'e düşür | Kuru çalışma kilidi, pompa çalışmaz |
-| Toprağı kurut | "Bitki susuz" bildirimi (60 sn sonra) |
-| Cihazı çevrimdışı yap | Çevrimdışı bildirimi; planlı sulama cihazda sürer |
+| Saksı 1 / 2 toprağını kurut | "Bitki susadı" bildirimi (60 sn sonra) |
+| Cihazı çevrimdışı yap | Çevrimdışı bildirimi; programlı sulama cihazda sürer |
 | Uyarı tekrar sürelerini sıfırla | Aynı uyarıyı hemen tekrar görmek için |
 
 Bu bölüm yalnızca sahte cihazla çalışırken görünür.
 
-**Demo için kısaltılan süreler** (Ayarlar'dan değiştirilebilir): iki sulama arası bekleme 1 dk (dokümandaki öneri 10 dk), "bitki susuz" doğrulama süresi 60 sn (öneri 5 dk).
+**İlk açılışta:** Saksı 1'de Difenbahya, Saksı 2'de Barış Çiçeği vardır (tasarımdaki örnek). Saksı 2 son 30 saattir sulanmamış gibi başlar; bu yüzden bir süre sonra "Bitki susadı" bildirimi görürsünüz. Saksı 1 düzenli sulanmış gibi başlar. Her saksıda son 30 günün geçmişi hazır gelir.
 
-> Uygulama verileri (bitkiler, planlar, ayarlar) telefonda saklanır. Sahte cihazın ölçümleri ise her açılışta yeniden üretilir.
+**Programlı sulamayı denemek için:** Sulama programı ekranında saati şimdiden 2 dakika sonrasına, günü de bugüne ayarlayıp Kaydet'e basın. Süre dolunca cihaz kendisi sular ve "Sulama tamamlandı" bildirimi gelir.
+
+**Demo için kısaltılan süreler** (Ayarlar'dan değiştirilebilir): iki sulama arası bekleme 1 dk (dokümandaki öneri 10 dk), "bitki susadı" doğrulama süresi 60 sn (öneri 5 dk).
+
+> Uygulama verileri (saksı bitkileri, programlar, ayarlar, eklediğin bitkiler) telefonda saklanır. Sahte cihazın ölçümleri ise her açılışta yeniden üretilir.
 
 ## Testler ve kod kontrolü
 
@@ -178,22 +188,34 @@ Testler plan zamanlama mantığını, bitki kataloğunu, nem durumunu, grafik ö
 ```
 lib/
   main.dart                 Giriş noktası; servisler ve provider'lar burada kurulur
-  theme/app_theme.dart      Tüm renkler, köşe yuvarlaklıkları, Material 3 tema
+  theme/app_theme.dart      Tasarımın renk paleti (açık/koyu), yazı tipleri, Material 3 tema
   models/                   Veri sınıfları (Plant, Pot, WateringSchedule, AppAlert ...)
-  data/plant_catalog.dart   Hazır bitki profilleri
+  data/plant_catalog.dart   Hazır bitki profilleri (6 kategori)
   services/
     device_service.dart       Cihazla konuşan soyut arayüz
-    mock_device_service.dart  ESP32'yi taklit eden sahte cihaz
+    mock_device_service.dart  ESP32'yi taklit eden sahte cihaz (2 saksı)
   providers/                Durum yönetimi (Provider)
-  screens/                  Ekranlar
-  widgets/                  Tekrar kullanılan arayüz parçaları
-  utils/formatters.dart     Türkçe tarih, saat, yüzde biçimlendirme
+  screens/                  Ekranlar (ana sayfa, saksılarım, geçmiş, ayarlar, bildirimler ...)
+  widgets/                  Tekrar kullanılan parçalar (kart, nem halkası, grafikler, bitki çizimleri ...)
+  l10n/                     Dil desteği: strings.dart (altyapı), en.dart (İngilizce çeviriler)
+  utils/                    Tarih/sayı biçimlendirme, grafik hesapları
+docs/design/                Claude Design ekran tasarımları (PNG, açık ve koyu)
 test/                       Birim ve widget testleri
 android/                    Android proje dosyaları
 web/                        Tarayıcıda çalıştırmak için
 ```
 
-Kullanılan paketler: `provider` (durum yönetimi), `fl_chart` (grafik), `shared_preferences` (yerel kayıt), `intl` (Türkçe biçim).
+Kullanılan paketler: `provider` (durum yönetimi), `shared_preferences` (yerel kayıt), `intl` (Türkçe biçim), `google_fonts` (yazı tipleri). Grafikler ve bitki çizimleri paket kullanmadan `CustomPainter` ile çizilir.
+
+**Dil desteği (Türkçe / English):** Kodda metinler Türkçe yazılır ve `context.t('Metin')` ile çağrılır; Türkçe metin aynı zamanda çeviri anahtarıdır. İngilizce karşılığı `lib/l10n/en.dart` içindedir. Yeni bir metin eklerken:
+
+1. Ekranda `context.t('Yeni metin')` (widget dışında `Strings.t(...)`) ile yaz. Değişken gerekiyorsa `{0}`, `{1}` kullan: `context.t('{0} için seçildi.', [ad])`.
+2. `lib/l10n/en.dart` içine aynı Türkçe metni anahtar yaparak İngilizcesini ekle.
+3. `flutter test` çalıştır. Çevirisi eksik bir metin varsa `test/l10n_test.dart` hangisi olduğunu söyler.
+
+Dil Ayarlar'dan seçilir, telefonda saklanır ve uygulama yeniden açılınca korunur. Cihazdan gelen uyarılar ve bildirimler metin olarak değil değerleriyle saklanır; bu yüzden dil değişince eskileri de yeni dilde görünür.
+
+**Tasarımı güncellemek için:** Renkler ve yazı tipleri yalnızca `lib/theme/app_theme.dart` içindedir. Ekran düzeni ilgili `lib/screens/` dosyasındadır. Bitki çizimleri `lib/widgets/plant_illustration.dart` içindedir.
 
 ## Gerçek cihaza geçiş
 
@@ -296,11 +318,11 @@ Yukarıdaki ayrıntıların özeti. Projeyi ilk kez açan biri bu adımları sı
 
 **Uygulamada ilk denemeler**
 
-12. [ ] **Panel**'de *Bitki seç*'e dokun, **Bitkiler** listesinden bir bitki (örn. Domates) seç ve *Saksıya ata*'ya bas.
-13. [ ] **Şimdi sula**'ya dokunup miktarı seç, sulamayı başlat. Nem artar, depo azalır.
-14. [ ] **Plan ekle** ile *2 dk sonra* seçeneğini kaydet. Plan zamanı gelince cihaz kendisi sular.
-15. [ ] Saksı kartına dokunarak **Saksı detayı**'nı aç. Canlı değerleri ve geçmiş grafiğini incele.
-16. [ ] **Ayarlar → Simülasyon**'dan depoyu düşürüp toprağı kurutarak **Bildirimler** sekmesindeki uyarıları dene.
+12. [ ] **Saksılarım** sekmesinde bir saksının kartına dokun, bir bitki kategorisi seç, *Devam et*'e bas, bir bitkiye dokunup *Saksı için seç*'e bas.
+13. [ ] **Ana sayfa**'da **Şimdi Sula**'ya dokunup miktarı seç, sulamayı başlat. Nem halkası dolar, depo azalır.
+14. [ ] Ana sayfada **Sonraki sulama** kutusuna dokun. Saati şimdiden 2 dakika sonrasına, günü bugüne ayarlayıp *Kaydet*'e bas. Süre dolunca cihaz kendisi sular.
+15. [ ] **Geçmiş** sekmesinde Gün / Hafta / Ay grafiklerini incele.
+16. [ ] **Ayarlar → Simülasyon**'dan depoyu düşürüp toprağı kurutarak ana sayfadaki **zil** simgesinden bildirimleri dene.
 
 **Geliştirmeye başlamadan önce**
 

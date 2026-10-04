@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Yazı tipleri (Fredoka, Nunito) ilk açılışta indirilir; ileride Firebase / MQTT de gerekecek. -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Bitki Sulama"
         android:name="${applicationName}"

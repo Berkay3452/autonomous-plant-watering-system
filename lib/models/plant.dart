@@ -1,17 +1,25 @@
-import 'package:flutter/material.dart';
-
-/// Bitki kategorileri. Bitkiler ekranında filtre olarak kullanılır.
+/// Bitki kategorileri ("Bitki türü" ekranındaki 6 kart).
 enum PlantCategory {
-  vegetable('Sebzeler', Icons.eco),
-  herb('Aromatik bitkiler', Icons.spa),
-  succulent('Sukulent ve kaktüsler', Icons.wb_sunny_outlined),
-  houseplant('Salon bitkileri', Icons.local_florist),
-  other('Diğer', Icons.yard);
+  tropical('Tropikal', 'Tropikal bitki', 'Orta su'),
+  succulent('Sukulent', 'Sukulent bitki', 'Az su'),
+  cactus('Kaktüs', 'Kaktüs', 'Çok az su'),
+  flowering('Çiçekli', 'Çiçekli bitki', 'Bol su'),
+  herb('Aromatik', 'Aromatik bitki', 'Orta su'),
+  vegetable('Sebze & Meyve', 'Sebze & meyve', 'Bol su');
 
-  const PlantCategory(this.label, this.icon);
+  const PlantCategory(this.label, this.typeLabel, this.waterLabel);
 
+  /// Kart ve liste başlığı: "Tropikal".
   final String label;
-  final IconData icon;
+
+  /// Ana sayfa alt başlığı: "Tropikal bitki".
+  final String typeLabel;
+
+  /// Kategorinin genel su ihtiyacı: "Orta su".
+  final String waterLabel;
+
+  static PlantCategory fromName(String? name) =>
+      values.firstWhere((c) => c.name == name, orElse: () => PlantCategory.tropical);
 }
 
 /// Bitkinin su ihtiyacı (dokümandaki "sulamaSeviyesi" alanı).
@@ -24,6 +32,9 @@ enum WaterNeed {
   const WaterNeed(this.label);
 
   final String label;
+
+  static WaterNeed fromName(String? name) =>
+      values.firstWhere((w) => w.name == name, orElse: () => WaterNeed.medium);
 }
 
 /// Profil değerlerinin nereden geldiğini gösterir. Ekipçe doğrulanmamış
@@ -37,6 +48,9 @@ enum ValueSource {
   const ValueSource(this.label);
 
   final String label;
+
+  static ValueSource fromName(String? name) =>
+      values.firstWhere((s) => s.name == name, orElse: () => ValueSource.user);
 }
 
 /// Bitki profili. Nem değerleri kapasitif sensörün yüzde ölçeğindedir.
@@ -116,15 +130,15 @@ class Plant {
     return Plant(
       id: json['id'] as String,
       name: json['name'] as String,
-      category: PlantCategory.values.byName(json['category'] as String),
+      category: PlantCategory.fromName(json['category'] as String?),
       minMoisture: json['minMoisture'] as int,
       idealMoistureMin: json['idealMoistureMin'] as int,
       idealMoistureMax: json['idealMoistureMax'] as int,
-      waterNeed: WaterNeed.values.byName(json['waterNeed'] as String),
+      waterNeed: WaterNeed.fromName(json['waterNeed'] as String?),
       tempMin: (json['tempMin'] as num).toDouble(),
       tempMax: (json['tempMax'] as num).toDouble(),
       description: json['description'] as String? ?? '',
-      source: ValueSource.values.byName(json['source'] as String? ?? 'user'),
+      source: ValueSource.fromName(json['source'] as String?),
     );
   }
 }

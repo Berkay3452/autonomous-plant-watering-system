@@ -1,199 +1,219 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/strings.dart';
+import '../models/pot.dart';
 import '../providers/alerts_provider.dart';
-import '../providers/pot_provider.dart';
+import '../providers/pots_provider.dart';
 import '../providers/schedule_provider.dart';
+import '../providers/settings_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
-import '../widgets/connection_badge.dart';
-import '../widgets/parameter_tile.dart';
-import '../widgets/pot_card.dart';
-import '../widgets/tank_gauge.dart';
+import '../widgets/app_background.dart';
+import '../widgets/circle_icon_button.dart';
+import '../widgets/metric_card.dart';
+import '../widgets/moisture_ring.dart';
+import '../widgets/pill_segmented.dart';
+import '../widgets/plant_illustration.dart';
+import '../widgets/status_pill.dart';
 import '../widgets/water_now_sheet.dart';
-import 'plants_screen.dart';
-import 'pot_detail_screen.dart';
-import 'schedule_edit_screen.dart';
+import 'schedule_screen.dart';
 
-/// Panel (ana sayfa): saksı özeti, depo seviyesi, bağlantı durumu ve
-/// "şimdi sula".
+/// Ana sayfa: seçili saksının bitkisi, nemi, durumu ve hızlı sulama.
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key, this.onOpenAlerts});
+  const HomeScreen({super.key, required this.onOpenNotifications});
 
-  final VoidCallback? onOpenAlerts;
+  final VoidCallback onOpenNotifications;
 
-  void _openDetail(BuildContext context) {
-    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const PotDetailScreen()));
-  }
-
-  void _choosePlant(BuildContext context) {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (_) => const PlantsScreen(pickMode: true)),
-    );
+  String _headline(PotsProvider pots, PotStatus status) {
+    final live = pots.liveOf(pots.selectedId);
+    if (live == null) {
+      return pots.connection == DeviceConnection.offline
+          ? Strings.t('Cihaza ulaşılamıyor')
+          : Strings.t('Cihaza bağlanılıyor');
+    }
+    return switch (status) {
+      PotStatus.noPlant => Strings.t('Saksına bir bitki seç'),
+      PotStatus.dry => Strings.t('Bitkinin suya ihtiyacı var'),
+      PotStatus.low => Strings.t('Bitkin biraz kuru'),
+      PotStatus.wet => Strings.t('Bitkin fazla ıslak'),
+      _ => Strings.t('Bitkin iyi görünüyor'),
+    };
   }
 
   @override
   Widget build(BuildContext context) {
-    final pot = context.watch<PotProvider>();
+    final pots = context.watch<PotsProvider>();
     final schedules = context.watch<ScheduleProvider>();
-    final unreadWarnings = context.select<AlertsProvider, int>(
-      (a) => a.alerts.where((x) => !x.read && x.type.isWarning).length,
-    );
-    final snapshot = pot.snapshot;
-    final next = schedules.nextFor(pot.pot.id);
+    final settings = context.watch<SettingsProvider>();
+    final unread = context.select<AlertsProvider, int>((a) => a.unreadCount);
+    final p = context.palette;
     final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
+    final t = context.t;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Panel'),
-        actions: [
-          ConnectionBadge(connection: pot.connection),
-          const SizedBox(width: AppSpacing.page),
-        ],
-      ),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(AppSpacing.page, AppSpacing.sm, AppSpacing.page, AppSpacing.xl),
-        children: [
-          if (pot.connectionError != null)
-            _Banner(
-              icon: Icons.error_outline,
-              color: AppColors.danger,
-              text: pot.connectionError!,
-            ),
-          if (pot.connection == DeviceConnection.offline && pot.connectionError == null)
-            const _Banner(
-              icon: Icons.wifi_off,
-              color: AppColors.danger,
-              text: 'Cihazdan veri gelmiyor. Planlı sulama cihazda sürer; '
-                  'bağlantı gelince veriler güncellenir.',
-            ),
-          if (unreadWarnings > 0)
-            _Banner(
-              icon: Icons.notifications_active_outlined,
-              color: AppColors.warning,
-              text: '$unreadWarnings okunmamış uyarı var.',
-              onTap: onOpenAlerts,
-            ),
-          PotCard(
-            pot: pot.pot,
-            plant: pot.plant,
-            status: pot.status,
-            snapshot: snapshot,
-            onTap: () => _openDetail(context),
-            onChoosePlant: () => _choosePlant(context),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          Row(
+    final pot = pots.selected;
+    final plant = pots.plantOf(pot.id);
+    final live = pots.liveOf(pot.id);
+    final status = pots.statusOf(pot.id);
+    final next = schedules.nextFor(pot.id);
+    final tank = pots.tank;
+
+    return AppBackground(
+      child: SafeArea(
+        bottom: false,
+        child: SingleChildScrollView(
+          child: Stack(
             children: [
-              Expanded(
-                child: FilledButton.icon(
-                  onPressed: pot.isOnline ? () => showWaterNowSheet(context) : null,
-                  icon: const Icon(Icons.water_drop),
-                  label: const Text('Şimdi sula'),
+              // Bitkinin arkasındaki büyük yuvarlak.
+              Positioned(
+                top: 120,
+                left: -20,
+                right: -20,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(color: p.blob, shape: BoxShape.circle),
+                  ),
                 ),
               ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: () => Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => ScheduleEditScreen(potId: pot.pot.id),
-                  )),
-                  icon: const Icon(Icons.event_outlined),
-                  label: const Text('Plan ekle'),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.page, 14, AppSpacing.page, 120),
+                child: Column(
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                t('Merhaba, {0}', [settings.userName]),
+                                style: text.bodyLarge?.copyWith(color: p.textMuted),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(_headline(pots, status), style: text.headlineSmall),
+                            ],
+                          ),
+                        ),
+                        CircleIconButton(
+                          icon: Icons.notifications_none_rounded,
+                          tooltip: t('Bildirimler'),
+                          showDot: unread > 0,
+                          onPressed: onOpenNotifications,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    PillSegmented<String>(
+                      items: [for (final item in pots.pots) (item.id, t(item.name))],
+                      value: pot.id,
+                      onChanged: pots.selectPot,
+                    ),
+                    if (pots.connection == DeviceConnection.offline) ...[
+                      const SizedBox(height: 12),
+                      _OfflineBanner(error: pots.connectionError?.resolve()),
+                    ],
+                    const SizedBox(height: 12),
+                    MoistureRing(
+                      size: 212,
+                      value: live?.moisture,
+                      child: PlantIllustration(kind: plantKindFor(plant), size: 128),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(plant == null ? t('Bitki seçilmedi') : t(plant.name), style: text.headlineSmall?.copyWith(fontSize: 23)),
+                    const SizedBox(height: 0),
+                    Text(
+                      '${plant == null ? t('Boş saksı') : t(plant.category.typeLabel)} · ${t(pot.name)}',
+                      style: text.bodyLarge?.copyWith(color: p.textMuted),
+                    ),
+                    const SizedBox(height: 10),
+                    StatusPill(label: t(status.homeLabel), tone: status.tone),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: MetricCard(
+                            icon: Icons.water_drop_outlined,
+                            label: t('Toprak nemi'),
+                            value: live == null ? '—' : formatPercent(live.moisture),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MetricCard(
+                            icon: Icons.thermostat_rounded,
+                            label: t('Sıcaklık'),
+                            value: live == null ? '—' : formatTemperature(live.temperature),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: MetricCard(
+                            icon: Icons.propane_tank_outlined,
+                            label: t('Su deposu'),
+                            value: tank.level == null ? '—' : formatPercent(tank.level!),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: MetricCard(
+                            icon: Icons.schedule_rounded,
+                            label: t('Sonraki sulama'),
+                            value: next == null ? t('Kapalı') : formatNextShort(next),
+                            onTap: () => Navigator.of(context).push(
+                              MaterialPageRoute(builder: (_) => ScheduleScreen(potId: pot.id)),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: FilledButton.icon(
+                        onPressed: pots.isOnline ? () => showWaterNowSheet(context, potId: pot.id) : null,
+                        icon: const Icon(Icons.water_drop_outlined),
+                        label: Text(t('Şimdi Sula')),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.md),
-          Card(
-            child: ListTile(
-              leading: CircleAvatar(
-                backgroundColor: scheme.secondaryContainer,
-                child: Icon(Icons.schedule, color: scheme.onSecondaryContainer),
-              ),
-              title: const Text('Sıradaki sulama'),
-              subtitle: Text(
-                next == null
-                    ? 'Planlanmış sulama yok'
-                    : '${formatUpcoming(next.time)} · ${formatPercent(next.schedule.amountPercent)} · '
-                        '${next.schedule.repeat.label}',
-              ),
-              trailing: next == null
-                  ? null
-                  : Text(formatCountdown(next.time), style: text.labelMedium),
-              onTap: () => _openDetail(context),
-            ),
-          ),
-          const SizedBox(height: AppSpacing.md),
-          TankGauge(tank: pot.tank, onTap: () => _openDetail(context)),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            children: [
-              Expanded(
-                child: ParameterTile(
-                  icon: Icons.thermostat,
-                  label: 'Sıcaklık',
-                  value: snapshot == null ? '—' : formatTemperature(snapshot.temperature),
-                  color: AppColors.temperature,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: ParameterTile(
-                  icon: Icons.cloud_outlined,
-                  label: 'Hava nemi',
-                  value: snapshot == null ? '—' : formatPercent(snapshot.humidity),
-                  color: AppColors.humidity,
-                ),
-              ),
-            ],
-          ),
-          if (snapshot != null)
-            Padding(
-              padding: const EdgeInsets.only(top: AppSpacing.md),
-              child: Text(
-                'Son güncelleme: ${formatTime(snapshot.time)}',
-                textAlign: TextAlign.center,
-                style: text.labelSmall?.copyWith(color: scheme.onSurfaceVariant),
-              ),
-            ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _Banner extends StatelessWidget {
-  const _Banner({required this.icon, required this.color, required this.text, this.onTap});
+class _OfflineBanner extends StatelessWidget {
+  const _OfflineBanner({this.error});
 
-  final IconData icon;
-  final Color color;
-  final String text;
-  final VoidCallback? onTap;
+  final String? error;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: Material(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
-        child: InkWell(
-          borderRadius: BorderRadius.circular(14),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            child: Row(
-              children: [
-                Icon(icon, color: color),
-                const SizedBox(width: AppSpacing.md),
-                Expanded(child: Text(text)),
-                if (onTap != null) Icon(Icons.chevron_right, color: color),
-              ],
+    final p = context.palette;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(color: p.warnBg, borderRadius: BorderRadius.circular(18)),
+      child: Row(
+        children: [
+          Icon(Icons.wifi_off_rounded, color: p.warnFg),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              error ?? context.t('Cihazdan veri gelmiyor. Programlı sulama cihazda sürer.'),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: p.warnFg),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

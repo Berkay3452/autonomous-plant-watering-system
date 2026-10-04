@@ -44,18 +44,28 @@ class Pot {
   }
 }
 
+/// Durum etiketinin rengini belirler.
+enum StatusTone { good, warn, neutral }
+
 /// Saksının bitkiye göre nem durumu.
 enum PotStatus {
-  noPlant('Bitki seçilmedi'),
-  unknown('Veri yok'),
-  dry('Susuz'),
-  low('İdealin altında'),
-  ideal('İdeal'),
-  wet('Fazla ıslak');
+  noPlant('Bitki seçilmedi', 'Saksına bir bitki seç', StatusTone.neutral),
+  unknown('Veri yok', 'Veri bekleniyor', StatusTone.neutral),
+  dry('Sulama gerekli', 'Sulama gerekli', StatusTone.warn),
+  low('Biraz kuru', 'Yakında sulanmalı', StatusTone.neutral),
+  ideal('İyi durumda', 'Sulama gerekmiyor', StatusTone.good),
+  wet('Fazla ıslak', 'Sulama gerekmiyor', StatusTone.good);
 
-  const PotStatus(this.label);
+  const PotStatus(this.label, this.homeLabel, this.tone);
 
+  /// Saksılarım kartındaki etiket.
   final String label;
+
+  /// Ana sayfadaki etiket.
+  final String homeLabel;
+  final StatusTone tone;
+
+  bool get needsWater => this == PotStatus.dry;
 }
 
 PotStatus evaluatePotStatus(double? moisture, Plant? plant) {

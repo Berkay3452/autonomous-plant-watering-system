@@ -1,16 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/strings.dart';
 import '../models/plant.dart';
 import '../providers/plants_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../widgets/app_background.dart';
+import '../widgets/category_icon.dart';
+import '../widgets/circle_icon_button.dart';
 
 /// Yeni bitki profili ekleme ya da kullanıcının eklediği bitkiyi düzenleme.
 class PlantFormScreen extends StatefulWidget {
-  const PlantFormScreen({super.key, this.plant});
+  const PlantFormScreen({super.key, this.plant, this.initialCategory});
 
   final Plant? plant;
+  final PlantCategory? initialCategory;
 
   @override
   State<PlantFormScreen> createState() => _PlantFormScreenState();
@@ -34,7 +39,7 @@ class _PlantFormScreenState extends State<PlantFormScreen> {
     final p = widget.plant;
     _name = TextEditingController(text: p?.name ?? '');
     _description = TextEditingController(text: p?.description ?? '');
-    _category = p?.category ?? PlantCategory.other;
+    _category = p?.category ?? widget.initialCategory ?? PlantCategory.tropical;
     _waterNeed = p?.waterNeed ?? WaterNeed.medium;
     _minMoisture = (p?.minMoisture ?? 35).toDouble();
     _ideal = RangeValues((p?.idealMoistureMin ?? 45).toDouble(), (p?.idealMoistureMax ?? 65).toDouble());
@@ -51,9 +56,11 @@ class _PlantFormScreenState extends State<PlantFormScreen> {
   void _save() {
     if (!_formKey.currentState!.validate()) return;
     if (_minMoisture > _ideal.start) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Minimum nem, ideal aralığın alt sınırından büyük olamaz.')),
-      );
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+          content: Text(context.t('Minimum nem, ideal aralığın alt sınırından büyük olamaz.')),
+        ));
       return;
     }
     final provider = context.read<PlantsProvider>();
@@ -81,99 +88,142 @@ class _PlantFormScreenState extends State<PlantFormScreen> {
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
+    final t = context.t;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isNew ? 'Yeni bitki' : 'Bitkiyi düzenle')),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.page),
-          child: FilledButton.icon(
-            onPressed: _save,
-            icon: const Icon(Icons.check),
-            label: const Text('Kaydet'),
-          ),
-        ),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.page),
-          children: [
-            TextFormField(
-              controller: _name,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Bitki adı'),
-              validator: (v) => (v == null || v.trim().isEmpty) ? 'Bir ad girin' : null,
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            DropdownButtonFormField<PlantCategory>(
-              initialValue: _category,
-              decoration: const InputDecoration(labelText: 'Kategori'),
-              items: [
-                for (final c in PlantCategory.values)
-                  DropdownMenuItem(
-                    value: c,
-                    child: Row(children: [Icon(c.icon, size: 20), const SizedBox(width: 8), Text(c.label)]),
+      body: AppBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.page, 14, AppSpacing.page, 8),
+                child: Row(
+                  children: [
+                    CircleIconButton(
+                      icon: Icons.arrow_back_ios_new_rounded,
+                      tooltip: t('Geri'),
+                      onPressed: () => Navigator.of(context).maybePop(),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(_isNew ? t('Yeni bitki') : t('Bitkiyi düzenle'), style: text.headlineMedium),
+                      ),
+                    ),
+                    const SizedBox(width: 44),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: Form(
+                  key: _formKey,
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.page),
+                    children: [
+                      TextFormField(
+                        controller: _name,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(labelText: t('Bitki adı')),
+                        validator: (v) => (v == null || v.trim().isEmpty) ? t('Bir ad gir') : null,
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      DropdownButtonFormField<PlantCategory>(
+                        initialValue: _category,
+                        decoration: InputDecoration(labelText: t('Kategori')),
+                        dropdownColor: p.sheet,
+                        borderRadius: BorderRadius.circular(20),
+                        items: [
+                          for (final c in PlantCategory.values)
+                            DropdownMenuItem(
+                              value: c,
+                              child: Row(
+                                children: [
+                                  CategoryIcon(category: c, size: 20, color: p.primary),
+                                  const SizedBox(width: 10),
+                                  Text(t(c.label)),
+                                ],
+                              ),
+                            ),
+                        ],
+                        onChanged: (v) => setState(() => _category = v ?? _category),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      DropdownButtonFormField<WaterNeed>(
+                        initialValue: _waterNeed,
+                        decoration: InputDecoration(labelText: t('Su ihtiyacı')),
+                        dropdownColor: p.sheet,
+                        borderRadius: BorderRadius.circular(20),
+                        items: [
+                          for (final w in WaterNeed.values) DropdownMenuItem(value: w, child: Text(t(w.label))),
+                        ],
+                        onChanged: (v) => setState(() => _waterNeed = v ?? _waterNeed),
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      _LabeledValue(label: t('Minimum nem'), value: formatPercent(_minMoisture)),
+                      Text(
+                        t('Bu değerin altında "bitki susadı" bildirimi gider ve otomatik modda sulama başlar.'),
+                        style: text.bodySmall,
+                      ),
+                      Slider(
+                        value: _minMoisture,
+                        min: 0,
+                        max: 90,
+                        divisions: 90,
+                        label: formatPercent(_minMoisture),
+                        onChanged: (v) => setState(() => _minMoisture = v),
+                      ),
+                      _LabeledValue(
+                        label: t('İdeal nem aralığı'),
+                        value: formatPercentRange(_ideal.start, _ideal.end),
+                      ),
+                      RangeSlider(
+                        values: _ideal,
+                        min: 0,
+                        max: 100,
+                        divisions: 100,
+                        labels: RangeLabels(formatPercent(_ideal.start), formatPercent(_ideal.end)),
+                        onChanged: (v) => setState(() => _ideal = v),
+                      ),
+                      _LabeledValue(
+                        label: t('Uygun sıcaklık'),
+                        value: formatTempRange(_temperature.start, _temperature.end),
+                      ),
+                      RangeSlider(
+                        values: _temperature,
+                        min: 0,
+                        max: 45,
+                        divisions: 45,
+                        labels: RangeLabels(
+                          formatTemperature(_temperature.start),
+                          formatTemperature(_temperature.end),
+                        ),
+                        onChanged: (v) => setState(() => _temperature = v),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      TextFormField(
+                        controller: _description,
+                        maxLines: 3,
+                        textCapitalization: TextCapitalization.sentences,
+                        decoration: InputDecoration(labelText: t('Bakım notu (isteğe bağlı)')),
+                      ),
+                    ],
                   ),
-              ],
-              onChanged: (v) => setState(() => _category = v ?? _category),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            DropdownButtonFormField<WaterNeed>(
-              initialValue: _waterNeed,
-              decoration: const InputDecoration(labelText: 'Su ihtiyacı'),
-              items: [
-                for (final w in WaterNeed.values) DropdownMenuItem(value: w, child: Text(w.label)),
-              ],
-              onChanged: (v) => setState(() => _waterNeed = v ?? _waterNeed),
-            ),
-            const SizedBox(height: AppSpacing.xl),
-            _LabeledValue(label: 'Minimum nem', value: formatPercent(_minMoisture)),
-            Text(
-              'Bu değerin altında "bitki susuz" bildirimi gider ve otomatik modda sulama başlar.',
-              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-            ),
-            Slider(
-              value: _minMoisture,
-              min: 0,
-              max: 90,
-              divisions: 90,
-              label: formatPercent(_minMoisture),
-              onChanged: (v) => setState(() => _minMoisture = v),
-            ),
-            _LabeledValue(
-              label: 'İdeal nem aralığı',
-              value: '${formatPercent(_ideal.start)}–${_ideal.end.round()}',
-            ),
-            RangeSlider(
-              values: _ideal,
-              min: 0,
-              max: 100,
-              divisions: 100,
-              labels: RangeLabels(formatPercent(_ideal.start), formatPercent(_ideal.end)),
-              onChanged: (v) => setState(() => _ideal = v),
-            ),
-            _LabeledValue(
-              label: 'Uygun sıcaklık',
-              value: '${_temperature.start.round()}–${_temperature.end.round()} °C',
-            ),
-            RangeSlider(
-              values: _temperature,
-              min: 0,
-              max: 45,
-              divisions: 45,
-              labels: RangeLabels('${_temperature.start.round()} °C', '${_temperature.end.round()} °C'),
-              onChanged: (v) => setState(() => _temperature = v),
-            ),
-            const SizedBox(height: AppSpacing.lg),
-            TextFormField(
-              controller: _description,
-              maxLines: 3,
-              textCapitalization: TextCapitalization.sentences,
-              decoration: const InputDecoration(labelText: 'Bakım notu (isteğe bağlı)'),
-            ),
-          ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(AppSpacing.page, 4, AppSpacing.page, 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: FilledButton.icon(
+                    onPressed: _save,
+                    icon: const Icon(Icons.check_rounded),
+                    label: Text(t('Kaydet')),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

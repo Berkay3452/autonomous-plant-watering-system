@@ -4,8 +4,8 @@ import '../theme/app_theme.dart';
 
 /// Değerin, ideal aralığa göre nerede olduğunu gösteren yatay çubuk.
 ///
-/// [min]–[max] çubuğun ölçeğidir. [idealMin]–[idealMax] yeşil bant,
-/// [threshold] kırmızı çizgi, [value] işaretçi olarak çizilir.
+/// [min]–[max] çubuğun ölçeğidir. [idealMin]–[idealMax] vurgulu bant,
+/// [threshold] uyarı çizgisi, [value] işaretçi olarak çizilir.
 class RangeBar extends StatelessWidget {
   const RangeBar({
     super.key,
@@ -15,7 +15,6 @@ class RangeBar extends StatelessWidget {
     this.idealMin,
     this.idealMax,
     this.threshold,
-    this.color,
     this.height = 10,
   });
 
@@ -25,14 +24,13 @@ class RangeBar extends StatelessWidget {
   final double? idealMin;
   final double? idealMax;
   final double? threshold;
-  final Color? color;
   final double height;
 
   double _fraction(double v) => ((v - min) / (max - min)).clamp(0.0, 1.0);
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
     return LayoutBuilder(builder: (context, constraints) {
       final width = constraints.maxWidth;
       return SizedBox(
@@ -44,7 +42,7 @@ class RangeBar extends StatelessWidget {
             Container(
               height: height,
               decoration: BoxDecoration(
-                color: scheme.surfaceContainerHighest,
+                color: p.track,
                 borderRadius: BorderRadius.circular(height),
               ),
             ),
@@ -55,7 +53,7 @@ class RangeBar extends StatelessWidget {
                 child: Container(
                   height: height,
                   decoration: BoxDecoration(
-                    color: AppColors.ideal.withValues(alpha: 0.35),
+                    color: p.primary.withValues(alpha: 0.45),
                     borderRadius: BorderRadius.circular(height),
                   ),
                 ),
@@ -63,20 +61,18 @@ class RangeBar extends StatelessWidget {
             if (threshold != null)
               Positioned(
                 left: width * _fraction(threshold!) - 1,
-                child: Container(width: 2, height: height + 6, color: AppColors.danger),
+                child: Container(width: 2.5, height: height + 6, color: p.warnText),
               ),
             if (value != null)
-              AnimatedPositioned(
-                duration: const Duration(milliseconds: 500),
-                curve: Curves.easeOutCubic,
+              Positioned(
                 left: width * _fraction(value!) - (height + 6) / 2,
                 child: Container(
                   width: height + 6,
                   height: height + 6,
                   decoration: BoxDecoration(
-                    color: color ?? scheme.primary,
+                    color: p.primary,
                     shape: BoxShape.circle,
-                    border: Border.all(color: scheme.surface, width: 2.5),
+                    border: Border.all(color: p.sheet, width: 2.5),
                   ),
                 ),
               ),

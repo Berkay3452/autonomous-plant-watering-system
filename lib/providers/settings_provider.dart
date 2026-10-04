@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../l10n/strings.dart';
+import '../utils/formatters.dart';
+
 /// Uygulama ayarları. Hepsi telefonda (shared_preferences) saklanır.
 class SettingsProvider extends ChangeNotifier {
   SettingsProvider(this._prefs) {
@@ -10,6 +13,9 @@ class SettingsProvider extends ChangeNotifier {
   final SharedPreferences _prefs;
 
   static const _kTheme = 'settings.themeMode';
+  static const _kLanguage = 'settings.language';
+  static const _kFahrenheit = 'settings.fahrenheit';
+  static const _kUserName = 'settings.userName';
   static const _kTankAlert = 'settings.tankAlertThreshold';
   static const _kTankCritical = 'settings.tankCriticalThreshold';
   static const _kAutoMode = 'settings.autoMode';
@@ -20,6 +26,9 @@ class SettingsProvider extends ChangeNotifier {
   static const _kDryConfirm = 'settings.dryConfirmSeconds';
 
   ThemeMode _themeMode = ThemeMode.system;
+  AppLang _language = AppLang.tr;
+  bool _fahrenheit = false;
+  String _userName = 'Berkay';
   int _tankAlertThreshold = 20;
   int _tankCriticalThreshold = 5;
   bool _autoMode = false;
@@ -30,6 +39,15 @@ class SettingsProvider extends ChangeNotifier {
   int _dryConfirmSeconds = 60;
 
   ThemeMode get themeMode => _themeMode;
+
+  /// Arayüz dili. Telefonun dilinden bağımsız, kullanıcı seçer.
+  AppLang get language => _language;
+
+  /// Sıcaklık Fahrenheit olarak mı gösterilsin.
+  bool get fahrenheit => _fahrenheit;
+
+  /// Ana sayfadaki "Merhaba, ..." karşılaması.
+  String get userName => _userName;
 
   /// Depo bu yüzdenin altına inince bildirim gider.
   int get tankAlertThreshold => _tankAlertThreshold;
@@ -52,7 +70,7 @@ class SettingsProvider extends ChangeNotifier {
   /// Bu süre boyunca veri gelmezse cihaz çevrimdışı sayılır.
   int get offlineAfterSeconds => _offlineAfterSeconds;
 
-  /// Nem bu süre boyunca eşiğin altında kalırsa "bitki susuz" bildirimi gider.
+  /// Nem bu süre boyunca eşiğin altında kalırsa "bitki susadı" bildirimi gider.
   int get dryConfirmSeconds => _dryConfirmSeconds;
 
   void _load() {
@@ -61,6 +79,11 @@ class SettingsProvider extends ChangeNotifier {
       (m) => m.name == theme,
       orElse: () => ThemeMode.system,
     );
+    _language = AppLang.fromCode(_prefs.getString(_kLanguage));
+    Strings.lang = _language;
+    _fahrenheit = _prefs.getBool(_kFahrenheit) ?? _fahrenheit;
+    TemperatureFormat.fahrenheit = _fahrenheit;
+    _userName = _prefs.getString(_kUserName) ?? _userName;
     _tankAlertThreshold = _prefs.getInt(_kTankAlert) ?? _tankAlertThreshold;
     _tankCriticalThreshold = _prefs.getInt(_kTankCritical) ?? _tankCriticalThreshold;
     _autoMode = _prefs.getBool(_kAutoMode) ?? _autoMode;
@@ -74,6 +97,28 @@ class SettingsProvider extends ChangeNotifier {
   void setThemeMode(ThemeMode mode) {
     _themeMode = mode;
     _prefs.setString(_kTheme, mode.name);
+    notifyListeners();
+  }
+
+  void setLanguage(AppLang value) {
+    _language = value;
+    Strings.lang = value;
+    _prefs.setString(_kLanguage, value.code);
+    notifyListeners();
+  }
+
+  void setFahrenheit(bool value) {
+    _fahrenheit = value;
+    TemperatureFormat.fahrenheit = value;
+    _prefs.setBool(_kFahrenheit, value);
+    notifyListeners();
+  }
+
+  void setUserName(String value) {
+    final name = value.trim();
+    if (name.isEmpty) return;
+    _userName = name;
+    _prefs.setString(_kUserName, name);
     notifyListeners();
   }
 

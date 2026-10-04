@@ -1,10 +1,13 @@
+import '../l10n/strings.dart';
+
 enum WateringSource {
   manual('Manuel'),
-  scheduled('Planlı'),
+  scheduled('Programlı'),
   auto('Otomatik');
 
   const WateringSource(this.label);
 
+  /// Türkçe ad; ekranda `t(label)` ile çevrilir.
   final String label;
 }
 
@@ -31,9 +34,9 @@ class WateringEvent {
   final double durationSeconds;
 
   /// Engellendiyse nedeni ya da ek bilgi.
-  final String? message;
+  final Msg? message;
 
-  /// Planlı sulamada ilgili planın kimliği.
+  /// Programlı sulamada ilgili programın kimliği.
   final String? scheduleId;
 }
 
@@ -43,13 +46,13 @@ class WateringResult {
       : accepted = true,
         message = null;
 
-  const WateringResult.rejected(String this.message)
+  const WateringResult.rejected(Msg this.message)
       : accepted = false,
         ml = 0,
         durationSeconds = 0;
 
   final bool accepted;
-  final String? message;
+  final Msg? message;
   final double ml;
   final double durationSeconds;
 }

@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../l10n/strings.dart';
 import '../models/plant.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import 'plant_illustration.dart';
 import 'range_bar.dart';
 
 /// Bitki profilinin ayrıntılarını gösteren alt sayfa.
@@ -12,29 +14,32 @@ Future<String?> showPlantDetailSheet(
   BuildContext context, {
   required Plant plant,
   required bool isAssigned,
+  required String potName,
 }) {
   return showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => _PlantDetailSheet(plant: plant, isAssigned: isAssigned),
+    builder: (_) => _PlantDetailSheet(plant: plant, isAssigned: isAssigned, potName: potName),
   );
 }
 
 class _PlantDetailSheet extends StatelessWidget {
-  const _PlantDetailSheet({required this.plant, required this.isAssigned});
+  const _PlantDetailSheet({required this.plant, required this.isAssigned, required this.potName});
 
   final Plant plant;
   final bool isAssigned;
+  final String potName;
 
   @override
   Widget build(BuildContext context) {
     final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
+    final p = context.palette;
+    final t = context.t;
 
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.7,
+      initialChildSize: 0.72,
       maxChildSize: 0.95,
       builder: (context, controller) => ListView(
         controller: controller,
@@ -42,18 +47,22 @@ class _PlantDetailSheet extends StatelessWidget {
         children: [
           Row(
             children: [
-              CircleAvatar(
-                radius: 26,
-                backgroundColor: scheme.primaryContainer,
-                child: Icon(plant.category.icon, color: scheme.onPrimaryContainer),
+              Container(
+                width: 72,
+                height: 72,
+                decoration: BoxDecoration(
+                  color: p.isDark ? p.heroInner : p.blob,
+                  borderRadius: BorderRadius.circular(22),
+                ),
+                child: Center(child: PlantIllustration(kind: plantKindFor(plant), size: 56)),
               ),
               const SizedBox(width: AppSpacing.lg),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(plant.name, style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w600)),
-                    Text(plant.category.label, style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant)),
+                    Text(t(plant.name), style: text.headlineSmall),
+                    Text(t(plant.category.typeLabel), style: text.bodyLarge?.copyWith(color: p.textMuted)),
                   ],
                 ),
               ),
@@ -61,13 +70,15 @@ class _PlantDetailSheet extends StatelessWidget {
           ),
           if (plant.description.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.lg),
-            Text(plant.description, style: text.bodyLarge),
+            Text(t(plant.description), style: text.bodyLarge),
           ],
           const SizedBox(height: AppSpacing.xl),
           _ProfileRow(
-            label: 'Toprak nemi',
-            value: 'min ${formatPercent(plant.minMoisture)} · ideal '
-                '${formatPercent(plant.idealMoistureMin)}–${plant.idealMoistureMax}',
+            label: t('Toprak nemi'),
+            value: t('min {0} · ideal {1}', [
+              formatPercent(plant.minMoisture),
+              formatPercentRange(plant.idealMoistureMin, plant.idealMoistureMax),
+            ]),
             child: RangeBar(
               value: null,
               min: 0,
@@ -78,8 +89,8 @@ class _PlantDetailSheet extends StatelessWidget {
             ),
           ),
           _ProfileRow(
-            label: 'Sıcaklık',
-            value: '${plant.tempMin.round()}–${plant.tempMax.round()} °C',
+            label: t('Sıcaklık'),
+            value: formatTempRange(plant.tempMin, plant.tempMax),
             child: RangeBar(
               value: null,
               min: 0,
@@ -88,29 +99,24 @@ class _PlantDetailSheet extends StatelessWidget {
               idealMax: plant.tempMax,
             ),
           ),
-          _ProfileRow(label: 'Su ihtiyacı', value: plant.waterNeed.label),
+          _ProfileRow(label: t('Su ihtiyacı'), value: t(plant.waterNeed.label)),
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [
               Icon(
                 plant.source == ValueSource.document ? Icons.verified_outlined : Icons.info_outline,
                 size: 16,
-                color: scheme.onSurfaceVariant,
+                color: p.textMuted,
               ),
               const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  plant.source.label,
-                  style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ),
+              Expanded(child: Text(t(plant.source.label), style: text.bodySmall)),
             ],
           ),
           const SizedBox(height: AppSpacing.xl),
           FilledButton.icon(
             onPressed: isAssigned ? null : () => Navigator.pop(context, 'assign'),
             icon: Icon(isAssigned ? Icons.check : Icons.add),
-            label: Text(isAssigned ? 'Saksıda bu bitki var' : 'Saksıya ata'),
+            label: Text(isAssigned ? t('{0} için seçili', [potName]) : t('{0} için seç', [potName])),
           ),
           if (plant.isCustom) ...[
             const SizedBox(height: AppSpacing.sm),
@@ -120,16 +126,19 @@ class _PlantDetailSheet extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.pop(context, 'edit'),
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Düzenle'),
+                    label: Text(t('Düzenle')),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () => Navigator.pop(context, 'delete'),
-                    style: OutlinedButton.styleFrom(foregroundColor: AppColors.danger),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: p.warnText,
+                      side: BorderSide(color: p.warnText, width: 2),
+                    ),
                     icon: const Icon(Icons.delete_outline),
-                    label: const Text('Sil'),
+                    label: Text(t('Sil')),
                   ),
                 ),
               ],
@@ -159,7 +168,7 @@ class _ProfileRow extends StatelessWidget {
           Row(
             children: [
               Expanded(child: Text(label, style: text.titleSmall)),
-              Text(value, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w600)),
+              Text(value, style: text.bodyMedium?.copyWith(fontWeight: FontWeight.w800)),
             ],
           ),
           if (child != null) ...[const SizedBox(height: AppSpacing.sm), child!],

@@ -21,10 +21,6 @@ class PlantsProvider extends ChangeNotifier {
 
   List<Plant> get customPlants => List.unmodifiable(_custom);
 
-  /// Kullanılan kategoriler (boş "Diğer" kategorisi gösterilmez).
-  List<PlantCategory> get categories =>
-      PlantCategory.values.where((c) => all.any((p) => p.category == c)).toList();
-
   Plant? byId(String? id) {
     if (id == null) return null;
     for (final plant in all) {
@@ -33,14 +29,8 @@ class PlantsProvider extends ChangeNotifier {
     return null;
   }
 
-  List<Plant> filter({PlantCategory? category, String query = ''}) {
-    final q = query.trim().toLowerCase();
-    return all.where((p) {
-      if (category != null && p.category != category) return false;
-      if (q.isNotEmpty && !p.name.toLowerCase().contains(q)) return false;
-      return true;
-    }).toList();
-  }
+  List<Plant> inCategory(PlantCategory category) =>
+      all.where((p) => p.category == category).toList();
 
   String newCustomId() => 'custom-${DateTime.now().microsecondsSinceEpoch}';
 

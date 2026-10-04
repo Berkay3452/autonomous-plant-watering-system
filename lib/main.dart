@@ -5,9 +5,10 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'l10n/strings.dart';
 import 'providers/alerts_provider.dart';
 import 'providers/plants_provider.dart';
-import 'providers/pot_provider.dart';
+import 'providers/pots_provider.dart';
 import 'providers/schedule_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/app_shell.dart';
@@ -17,8 +18,7 @@ import 'theme/app_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initializeDateFormatting('tr_TR');
-  Intl.defaultLocale = 'tr_TR';
+  await initializeDateFormatting();
 
   final prefs = await SharedPreferences.getInstance();
 
@@ -26,15 +26,21 @@ Future<void> main() async {
   final DeviceService device = MockDeviceService();
 
   final settings = SettingsProvider(prefs);
+  Intl.defaultLocale = Strings.localeName;
+  Intl.defaultLocale = Strings.localeName;
   final plants = PlantsProvider(prefs);
-  final pot = PotProvider(prefs: prefs, device: device, plants: plants, settings: settings);
-  final schedules = ScheduleProvider(prefs: prefs, device: device);
-  final alerts = AlertsProvider(prefs: prefs, device: device, pot: pot, settings: settings);
+  final pots = PotsProvider(prefs: prefs, device: device, plants: plants, settings: settings);
+  final schedules = ScheduleProvider(
+    prefs: prefs,
+    device: device,
+    potIds: [for (final pot in pots.pots) pot.id],
+  );
+  final alerts = AlertsProvider(prefs: prefs, device: device, pots: pots, settings: settings);
 
   runApp(PlantWateringApp(
     settings: settings,
     plants: plants,
-    pot: pot,
+    pots: pots,
     schedules: schedules,
     alerts: alerts,
   ));
@@ -42,7 +48,7 @@ Future<void> main() async {
   // Arayüz açıldıktan sonra cihaza bağlan.
   alerts.init();
   await schedules.init();
-  await pot.init();
+  await pots.init();
 }
 
 class PlantWateringApp extends StatelessWidget {
@@ -50,14 +56,14 @@ class PlantWateringApp extends StatelessWidget {
     super.key,
     required this.settings,
     required this.plants,
-    required this.pot,
+    required this.pots,
     required this.schedules,
     required this.alerts,
   });
 
   final SettingsProvider settings;
   final PlantsProvider plants;
-  final PotProvider pot;
+  final PotsProvider pots;
   final ScheduleProvider schedules;
   final AlertsProvider alerts;
 
@@ -67,19 +73,19 @@ class PlantWateringApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider.value(value: settings),
         ChangeNotifierProvider.value(value: plants),
-        ChangeNotifierProvider.value(value: pot),
+        ChangeNotifierProvider.value(value: pots),
         ChangeNotifierProvider.value(value: schedules),
         ChangeNotifierProvider.value(value: alerts),
       ],
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) => MaterialApp(
-          title: 'Bitki Sulama',
+          onGenerateTitle: (context) => context.t('Bitki Sulama'),
           debugShowCheckedModeBanner: false,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: settings.themeMode,
-          locale: const Locale('tr', 'TR'),
-          supportedLocales: const [Locale('tr', 'TR'), Locale('en')],
+          locale: settings.language.locale,
+          supportedLocales: [for (final lang in AppLang.values) lang.locale],
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
             GlobalWidgetsLocalizations.delegate,

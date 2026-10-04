@@ -15,6 +15,9 @@ abstract class DeviceService {
 
   bool get isConnected;
 
+  /// Cihaza bağlı saksıların kimlikleri.
+  List<String> get potIds;
+
   /// Pompa debisi (ml/sn). Doküman 3.4'teki kalibrasyonla ölçülür.
   double get pumpFlowMlPerSec;
 
@@ -33,12 +36,16 @@ abstract class DeviceService {
 
   Future<void> disconnect();
 
+  /// Saksının geçmiş ölçümleri.
   Future<List<Reading>> fetchHistory(String potId, Duration range);
+
+  /// Saksının geçmiş sulamaları (grafikte işaret olarak gösterilir).
+  Future<List<WateringEvent>> fetchEvents(String potId, Duration range);
 
   /// "Şimdi sula" komutu. Güvenlik kuralları cihazda kontrol edilir.
   Future<WateringResult> waterNow(String potId, int amountPercent);
 
-  /// Planları cihaz belleğine yazar.
+  /// Programları cihaz belleğine yazar.
   Future<void> syncSchedules(List<WateringSchedule> schedules);
 
   Future<void> updateConfig(DeviceConfig config);

@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../providers/pot_provider.dart';
+import '../l10n/strings.dart';
+import '../providers/pots_provider.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
 
 /// "Şimdi sula" alt sayfasını açar. Sulama başlatılırsa sonucu SnackBar ile
-/// gösterir.
-Future<void> showWaterNowSheet(BuildContext context) async {
+/// gösterir. [potId] verilmezse seçili saksı sulanır.
+Future<void> showWaterNowSheet(BuildContext context, {String? potId}) async {
   final messenger = ScaffoldMessenger.of(context);
+  final id = potId ?? context.read<PotsProvider>().selectedId;
   final message = await showModalBottomSheet<String>(
     context: context,
     isScrollControlled: true,
     showDragHandle: true,
-    builder: (_) => const _WaterNowSheet(),
+    builder: (_) => _WaterNowSheet(potId: id),
   );
   if (message != null) {
     messenger
@@ -23,7 +25,9 @@ Future<void> showWaterNowSheet(BuildContext context) async {
 }
 
 class _WaterNowSheet extends StatefulWidget {
-  const _WaterNowSheet();
+  const _WaterNowSheet({required this.potId});
+
+  final String potId;
 
   @override
   State<_WaterNowSheet> createState() => _WaterNowSheetState();
@@ -35,32 +39,35 @@ class _WaterNowSheetState extends State<_WaterNowSheet> {
 
   static const _presets = [25, 50, 75, 100];
 
-  Future<void> _start(PotProvider pot) async {
+  Future<void> _start(PotsProvider pots) async {
     setState(() => _sending = true);
-    final result = await pot.waterNow(_amount);
+    final result = await pots.waterNow(widget.potId, _amount);
     if (!mounted) return;
     Navigator.of(context).pop(
       result.accepted
-          ? 'Sulama başladı: ≈ ${result.ml.round()} ml, ${formatSeconds(result.durationSeconds)}.'
-          : 'Sulama başlatılamadı. ${result.message}',
+          ? Strings.t('Sulama başladı: ≈ {0} ml, {1}.', [result.ml.round(), formatSeconds(result.durationSeconds)])
+          : Strings.t('Sulama başlatılamadı. {0}', [result.message!.resolve()]),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final pot = context.watch<PotProvider>();
+    final pots = context.watch<PotsProvider>();
+    final p = context.palette;
     final text = Theme.of(context).textTheme;
-    final scheme = Theme.of(context).colorScheme;
-    final estimate = pot.estimateDose(_amount);
-    final snapshot = pot.snapshot;
+    final t = context.t;
+    final pot = pots.potById(widget.potId);
+    final plant = pots.plantOf(widget.potId);
+    final live = pots.liveOf(widget.potId);
+    final estimate = pots.estimateDose(widget.potId, _amount);
 
     String? problem;
-    if (!pot.isOnline) {
-      problem = 'Cihaz çevrimdışı. Komut gönderilemez.';
-    } else if (snapshot?.pumpLocked ?? false) {
-      problem = 'Depo kritik seviyede, pompa kilitli. Önce depoyu doldurun.';
-    } else if (snapshot?.pumpRunning ?? false) {
-      problem = 'Pompa şu anda çalışıyor.';
+    if (!pots.isOnline) {
+      problem = t('Cihaz çevrimdışı. Komut gönderilemez.');
+    } else if (pots.snapshot?.pumpLocked ?? false) {
+      problem = t('Depo kritik seviyede, pompa kilitli. Önce depoyu doldur.');
+    } else if (live?.pumpRunning ?? false) {
+      problem = t('Pompa şu anda çalışıyor.');
     }
 
     return Padding(
@@ -74,23 +81,20 @@ class _WaterNowSheetState extends State<_WaterNowSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Şimdi sula', style: text.headlineSmall?.copyWith(fontWeight: FontWeight.w600)),
+          Text(t('Şimdi sula'), style: text.headlineSmall),
           const SizedBox(height: 4),
           Text(
-            '${pot.pot.name}${pot.plant != null ? ' · ${pot.plant!.name}' : ''}',
-            style: text.bodyMedium?.copyWith(color: scheme.onSurfaceVariant),
+            '${t(pot?.name ?? '')}${plant != null ? ' · ${t(plant.name)}' : ''}',
+            style: text.bodyLarge?.copyWith(color: p.textMuted),
           ),
           const SizedBox(height: AppSpacing.xl),
           Row(
             children: [
-              Text('Su miktarı', style: text.titleMedium),
+              Text(t('Su miktarı'), style: text.titleMedium),
               const Spacer(),
               Text(
                 formatPercent(_amount),
-                style: text.headlineSmall?.copyWith(
-                  color: AppColors.water,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: text.headlineSmall?.copyWith(color: p.primary, fontWeight: FontWeight.w700),
               ),
             ],
           ),
@@ -105,11 +109,15 @@ class _WaterNowSheetState extends State<_WaterNowSheet> {
           Wrap(
             spacing: AppSpacing.sm,
             children: [
-              for (final p in _presets)
+              for (final preset in _presets)
                 ChoiceChip(
-                  label: Text(formatPercent(p)),
-                  selected: _amount == p,
-                  onSelected: _sending ? null : (_) => setState(() => _amount = p),
+                  label: Text(formatPercent(preset)),
+                  selected: _amount == preset,
+                  showCheckmark: false,
+                  labelStyle: text.labelMedium?.copyWith(
+                    color: _amount == preset ? p.onPrimary : p.text,
+                  ),
+                  onSelected: _sending ? null : (_) => setState(() => _amount = preset),
                 ),
             ],
           ),
@@ -117,17 +125,17 @@ class _WaterNowSheetState extends State<_WaterNowSheet> {
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
-              color: AppColors.water.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
+              color: p.isDark ? p.tile : p.blob,
+              borderRadius: BorderRadius.circular(18),
             ),
             child: Row(
               children: [
-                const Icon(Icons.water_drop, color: AppColors.water),
+                Icon(Icons.water_drop, color: p.primary),
                 const SizedBox(width: AppSpacing.md),
                 Expanded(
                   child: Text(
-                    '≈ ${estimate.ml.round()} ml su · pompa ${formatSeconds(estimate.seconds)} çalışır'
-                    '${estimate.capped ? '\nAzami pompa süresi nedeniyle doz sınırlandı.' : ''}',
+                    t('≈ {0} ml su · pompa {1} çalışır', [estimate.ml.round(), formatSeconds(estimate.seconds)]) +
+                        (estimate.capped ? '\n${t('Azami pompa süresi nedeniyle doz sınırlandı.')}' : ''),
                     style: text.bodyMedium,
                   ),
                 ),
@@ -137,18 +145,18 @@ class _WaterNowSheetState extends State<_WaterNowSheet> {
           Padding(
             padding: const EdgeInsets.only(top: AppSpacing.sm),
             child: Text(
-              '%100 = tam doz (${pot.pot.fullDoseMl} ml). Ayarlar ekranından değiştirilebilir.',
-              style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
+              t('%100 = tam doz ({0} ml). Ayarlar ekranından değiştirilebilir.', [pot?.fullDoseMl ?? 200]),
+              style: text.bodySmall,
             ),
           ),
           if (problem != null) ...[
             const SizedBox(height: AppSpacing.md),
             Row(
               children: [
-                const Icon(Icons.error_outline, color: AppColors.danger, size: 18),
+                Icon(Icons.error_outline, color: p.warnText, size: 18),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(problem, style: text.bodyMedium?.copyWith(color: AppColors.danger)),
+                  child: Text(problem, style: text.bodyMedium?.copyWith(color: p.warnText)),
                 ),
               ],
             ),
@@ -157,15 +165,15 @@ class _WaterNowSheetState extends State<_WaterNowSheet> {
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
-              onPressed: _sending || problem != null ? null : () => _start(pot),
+              onPressed: _sending || problem != null ? null : () => _start(pots),
               icon: _sending
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 18,
                       height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(strokeWidth: 2, color: p.onPrimary),
                     )
-                  : const Icon(Icons.water_drop),
-              label: Text(_sending ? 'Gönderiliyor…' : 'Sulamayı başlat'),
+                  : const Icon(Icons.water_drop_outlined),
+              label: Text(_sending ? t('Gönderiliyor…') : t('Sulamayı başlat')),
             ),
           ),
         ],

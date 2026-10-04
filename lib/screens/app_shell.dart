@@ -3,15 +3,19 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../l10n/strings.dart';
 import '../models/alert.dart';
 import '../providers/alerts_provider.dart';
 import '../theme/app_theme.dart';
-import 'alerts_screen.dart';
+import '../widgets/floating_nav.dart';
+import 'history_screen.dart';
 import 'home_screen.dart';
-import 'plants_screen.dart';
+import 'notifications_screen.dart';
+import 'pots_screen.dart';
 import 'settings_screen.dart';
 
-/// Alt gezinme çubuklu ana iskelet: Panel, Bitkiler, Bildirimler, Ayarlar.
+/// Alt gezinme çubuklu ana iskelet: Ana sayfa, Saksılarım, Geçmiş, Ayarlar.
+/// Bildirimler ana sayfadaki zil simgesinden açılır.
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -23,7 +27,14 @@ class _AppShellState extends State<AppShell> {
   int _index = 0;
   StreamSubscription<AppAlert>? _alertSub;
 
-  static const _alertsTab = 2;
+  static const _tabs = [
+    NavTab('Ana sayfa', Icons.home_outlined, Icons.home_rounded),
+    NavTab('Saksılarım', Icons.yard_outlined, Icons.yard),
+    NavTab('Geçmiş', Icons.bar_chart_outlined, Icons.bar_chart_rounded),
+    NavTab('Ayarlar', Icons.settings_outlined, Icons.settings),
+  ];
+
+  // Sekme adları sabit Türkçe metindir; ekranda çevrilerek gösterilir.
 
   @override
   void initState() {
@@ -31,30 +42,30 @@ class _AppShellState extends State<AppShell> {
     _alertSub = context.read<AlertsProvider>().newAlerts.listen(_showAlert);
   }
 
+  void _openNotifications() {
+    Navigator.of(context).push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
+  }
+
   void _showAlert(AppAlert alert) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    messenger
+    final p = context.palette;
+    ScaffoldMessenger.of(context)
       ..hideCurrentSnackBar()
       ..showSnackBar(SnackBar(
         content: Row(
           children: [
             Icon(
-              alert.type.icon,
-              color: alert.type.isWarning ? AppColors.warning : AppColors.ideal,
+              alert.type.isWarning ? Icons.notifications_active_outlined : Icons.check_circle_outline,
+              color: alert.type.isWarning ? const Color(0xFFFCE3CC) : p.accent,
             ),
             const SizedBox(width: AppSpacing.md),
-            Expanded(child: Text('${alert.type.label}: ${alert.message}')),
+            Expanded(child: Text('${alert.title}. ${alert.message}')),
           ],
         ),
-        action: _index == _alertsTab
-            ? null
-            : SnackBarAction(label: 'Gör', onPressed: () => setState(() => _index = _alertsTab)),
+        action: SnackBarAction(label: Strings.t('Gör'), onPressed: _openNotifications),
         duration: const Duration(seconds: 5),
       ));
   }
-
-  void goToTab(int index) => setState(() => _index = index);
 
   @override
   void dispose() {
@@ -64,50 +75,23 @@ class _AppShellState extends State<AppShell> {
 
   @override
   Widget build(BuildContext context) {
-    final unread = context.select<AlertsProvider, int>((a) => a.unreadCount);
     return Scaffold(
+      extendBody: true,
       body: IndexedStack(
         index: _index,
         children: [
-          HomeScreen(onOpenAlerts: () => goToTab(_alertsTab)),
-          const PlantsScreen(),
-          const AlertsScreen(),
+          HomeScreen(onOpenNotifications: _openNotifications),
+          const PotsScreen(),
+          const HistoryScreen(),
           const SettingsScreen(),
         ],
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _index,
-        onDestinationSelected: goToTab,
-        destinations: [
-          const NavigationDestination(
-            icon: Icon(Icons.dashboard_outlined),
-            selectedIcon: Icon(Icons.dashboard),
-            label: 'Panel',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.local_florist_outlined),
-            selectedIcon: Icon(Icons.local_florist),
-            label: 'Bitkiler',
-          ),
-          NavigationDestination(
-            icon: Badge(
-              isLabelVisible: unread > 0,
-              label: Text('$unread'),
-              child: const Icon(Icons.notifications_outlined),
-            ),
-            selectedIcon: Badge(
-              isLabelVisible: unread > 0,
-              label: Text('$unread'),
-              child: const Icon(Icons.notifications),
-            ),
-            label: 'Bildirimler',
-          ),
-          const NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Ayarlar',
-          ),
+      bottomNavigationBar: FloatingNav(
+        tabs: [
+          for (final tab in _tabs) NavTab(context.t(tab.label), tab.icon, tab.selectedIcon),
         ],
+        selectedIndex: _index,
+        onSelected: (i) => setState(() => _index = i),
       ),
     );
   }
